@@ -2,92 +2,89 @@ const express = require("express");
 const axios = require("axios");
 
 const app = express();
-
-// Middleware
-app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// ENV
+// ===== CONFIG =====
 const BOT_TOKEN = process.env.BOT_TOKEN;
+const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
-if (!BOT_TOKEN) {
-  console.log("❌ BOT_TOKEN belum set!");
-}
-
-// ===============================
-// FUNCTION HANTAR TELEGRAM
-// ===============================
-async function sendTelegram(chatId, text) {
-  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-
+// ===== FUNCTION SEND MESSAGE =====
+async function sendMessage(chatId, text) {
   try {
-    const res = await axios.post(url, {
+    await axios.post(`${TELEGRAM_API}/sendMessage`, {
       chat_id: chatId,
       text: text,
+      parse_mode: "HTML"
     });
-
-    console.log("✅ Hantar berjaya:", res.data.result?.text);
+    console.log("✅ Hantar berjaya:", text);
   } catch (err) {
-    console.log("❌ Error hantar:", err.response?.data || err.message);
+    console.log("❌ Error:", err.response?.data || err.message);
   }
 }
 
-// ===============================
-// WEBHOOK TELEGRAM
-// ===============================
+// ===== WEBHOOK =====
 app.post("/webhook", async (req, res) => {
-  try {
-    const msg = req.body.message;
+  const message = req.body.message;
 
-    if (!msg) return res.send("OK");
+  if (!message) return res.sendStatus(200);
 
-    // 🚫 STOP LOOP (BOT JANGAN REPLY DIRI SENDIRI)
-    if (msg.from.is_bot) return res.send("OK");
+  const chatId = message.chat.id;
+  const text = message.text;
 
-    const chatId = msg.chat.id;
-    const text = msg.text;
+  console.log("📩 Message:", text);
 
-    console.log("📩 Message user:", text);
+  // ===== COMMAND SYSTEM =====
 
-    // ===============================
-    // COMMAND START
-    // ===============================
-    if (text === "/start") {
-      await sendTelegram(chatId, "👋 Selamat datang ke bot Auto Delivery!");
-    }
+  // START
+  if (text === "/start") {
+    await sendMessage(chatId,
+`👋 Selamat datang ke AUTO DELIVERY SYSTEM
 
-    // ===============================
-    // PAYMENT TRIGGER (SIMULASI)
-    // ===============================
-    else if (text && text.toLowerCase() === "payment") {
-      await sendTelegram(chatId, "🔥 Payment berjaya diterima!");
-    }
-
-    // ===============================
-    // OPTIONAL (DEBUG OFF)
-    // ===============================
-    // else {
-    //   await sendTelegram(chatId, "🤖 Message diterima: " + text);
-    // }
-
-    res.send("OK");
-  } catch (err) {
-    console.log("❌ ERROR:", err.response?.data || err.message);
-    res.send("ERROR");
+🛒 Taip:
+BUY - untuk beli produk
+INFO - untuk info`
+    );
   }
+
+  // BUY
+  else if (text === "BUY") {
+    await sendMessage(chatId,
+`🔥 Produk Premium
+
+💰 Harga: RM10
+📥 Dapat terus selepas bayar
+
+👉 Bayar sini:
+https://your-payment-link.com`
+    );
+  }
+
+  // INFO
+  else if (text === "INFO") {
+    await sendMessage(chatId,
+`📌 Info Produk:
+- Digital product
+- Instant delivery
+- Support 24 jam`
+    );
+  }
+
+  // DEFAULT
+  else {
+    await sendMessage(chatId,
+`❓ Command tak dikenali
+
+Taip:
+BUY
+INFO`
+    );
+  }
+
+  res.sendStatus(200);
 });
 
-// ===============================
-// ROOT TEST
-// ===============================
-app.get("/", (req, res) => {
-  res.send("Server hidup 🚀");
-});
-
-// ===============================
-// START SERVER
-// ===============================
+// ===== SERVER =====
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🚀 Server ON port " + PORT);
+  console.log("🚀 Server ON");
 });
