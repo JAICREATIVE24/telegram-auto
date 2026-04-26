@@ -24,67 +24,79 @@ async function sendMessage(chatId, text) {
 
 // ===== WEBHOOK =====
 app.post("/webhook", async (req, res) => {
-  const message = req.body.message;
+  try {
+    const message = req.body.message;
+    if (!message) return res.sendStatus(200);
 
-  if (!message) return res.sendStatus(200);
+    const chatId = message.chat.id;
 
-  const chatId = message.chat.id;
-  const text = message.text;
+    // 🔥 FIX: case insensitive + elak undefined
+    const text = (message.text || "").toLowerCase().trim();
 
-  console.log("📩 Message:", text);
+    console.log("📩 Message user:", text);
 
-  // ===== COMMAND SYSTEM =====
+    // ===== COMMAND SYSTEM =====
 
-  // START
-  if (text === "/start") {
-    await sendMessage(chatId,
+    // START
+    if (text === "/start") {
+      await sendMessage(chatId,
 `👋 Selamat datang ke AUTO DELIVERY SYSTEM
 
-🛒 Taip:
+🛒 Taip command:
 BUY - untuk beli produk
-INFO - untuk info`
-    );
-  }
+INFO - untuk info produk`
+      );
+    }
 
-  // BUY
-  else if (text === "BUY") {
-    await sendMessage(chatId,
-`🔥 Produk Premium
+    // BUY
+    else if (text === "buy") {
+      await sendMessage(chatId,
+`🔥 PRODUK PREMIUM
 
 💰 Harga: RM10
-📥 Dapat terus selepas bayar
+📥 Delivery: Instant
 
 👉 Bayar sini:
 https://your-payment-link.com`
-    );
-  }
+      );
+    }
 
-  // INFO
-  else if (text === "INFO") {
-    await sendMessage(chatId,
-`📌 Info Produk:
-- Digital product
-- Instant delivery
-- Support 24 jam`
-    );
-  }
+    // INFO
+    else if (text === "info") {
+      await sendMessage(chatId,
+`📌 INFO PRODUK
 
-  // DEFAULT
-  else {
-    await sendMessage(chatId,
+✔ Digital product
+✔ Instant delivery
+✔ Support 24 jam`
+      );
+    }
+
+    // DEFAULT
+    else {
+      await sendMessage(chatId,
 `❓ Command tak dikenali
 
 Taip:
 BUY
 INFO`
-    );
-  }
+      );
+    }
 
-  res.sendStatus(200);
+    res.sendStatus(200);
+  } catch (error) {
+    console.log("❌ Webhook Error:", error.message);
+    res.sendStatus(500);
+  }
 });
 
-// ===== SERVER =====
+// ===== ROOT TEST (OPTIONAL) =====
+app.get("/", (req, res) => {
+  res.send("🚀 Telegram Auto Delivery Bot Running");
+});
+
+// ===== START SERVER =====
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("🚀 Server ON");
+  console.log("🚀 Server ON port " + PORT);
 });
