@@ -7,11 +7,11 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// ENV (set kat Railway nanti)
+// ENV
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
 
-// Safety check (elak crash senyap)
+// Check ENV
 if (!BOT_TOKEN || !CHAT_ID) {
   console.log("❌ BOT_TOKEN atau CHAT_ID tak set");
 }
@@ -25,28 +25,45 @@ async function sendTelegram(text) {
       chat_id: CHAT_ID,
       text: text,
     });
-    console.log("✅ Message sent to Telegram");
   } catch (err) {
-    console.log("❌ Telegram error:", err.response?.data || err.message);
+    console.log("Error hantar Telegram:", err.message);
   }
 }
 
-// Webhook (ToyyibPay)
+// Webhook
 app.post("/webhook", async (req, res) => {
-  console.log("📥 Webhook masuk:", req.body);
+  try {
+    const msg = req.body.message;
 
-  await sendTelegram("🔥 Payment masuk!");
+    if (!msg) return res.send("OK");
 
-  res.send("OK");
+    const text = msg.text;
+
+    console.log("Message:", text);
+
+    if (text === "/start") {
+      await sendTelegram("👋 Selamat datang ke bot Auto Delivery!");
+    } 
+    else if (text.toLowerCase().includes("payment")) {
+      await sendTelegram("🔥 Payment berjaya diterima!");
+    } 
+    else {
+      await sendTelegram("🤖 Message diterima: " + text);
+    }
+
+    res.send("OK");
+  } catch (err) {
+    console.log("Error:", err.message);
+    res.send("ERROR");
+  }
 });
 
-// Test route
+// Test server
 app.get("/", (req, res) => {
   res.send("Server hidup 🚀");
 });
 
-// Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server ON port ${PORT}`);
+  console.log("Server ON");
 });
