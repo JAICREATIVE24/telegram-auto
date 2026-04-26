@@ -7,10 +7,9 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// ENV (set dekat Render)
+// ENV
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
-// Safety check
 if (!BOT_TOKEN) {
   console.log("❌ BOT_TOKEN belum set!");
 }
@@ -27,7 +26,7 @@ async function sendTelegram(chatId, text) {
       text: text,
     });
 
-    console.log("✅ Hantar berjaya:", res.data);
+    console.log("✅ Hantar berjaya:", res.data.result?.text);
   } catch (err) {
     console.log("❌ Error hantar:", err.response?.data || err.message);
   }
@@ -42,10 +41,13 @@ app.post("/webhook", async (req, res) => {
 
     if (!msg) return res.send("OK");
 
+    // 🚫 STOP LOOP (BOT JANGAN REPLY DIRI SENDIRI)
+    if (msg.from.is_bot) return res.send("OK");
+
     const chatId = msg.chat.id;
     const text = msg.text;
 
-    console.log("📩 Message masuk:", text);
+    console.log("📩 Message user:", text);
 
     // ===============================
     // COMMAND START
@@ -55,14 +57,14 @@ app.post("/webhook", async (req, res) => {
     }
 
     // ===============================
-    // TRIGGER PAYMENT
+    // PAYMENT TRIGGER (SIMULASI)
     // ===============================
     else if (text && text.toLowerCase() === "payment") {
       await sendTelegram(chatId, "🔥 Payment berjaya diterima!");
     }
 
     // ===============================
-    // OPTIONAL: DEBUG (OFF)
+    // OPTIONAL (DEBUG OFF)
     // ===============================
     // else {
     //   await sendTelegram(chatId, "🤖 Message diterima: " + text);
@@ -76,7 +78,7 @@ app.post("/webhook", async (req, res) => {
 });
 
 // ===============================
-// TEST SERVER
+// ROOT TEST
 // ===============================
 app.get("/", (req, res) => {
   res.send("Server hidup 🚀");
