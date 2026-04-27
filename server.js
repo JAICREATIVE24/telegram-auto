@@ -10,6 +10,9 @@ app.use(express.json());
 const BOT_TOKEN = "8533943288:AAGE-gd4pwTeI0jdVgHzDvkC7cv0qz7V2Hs";
 const WEBHOOK_URL = "https://telegram-auto-1-iaxi.onrender.com/webhook";
 
+// simpan code yang dah digunakan
+let usedCodes = new Set();
+
 // ==============================
 // 📤 SEND MESSAGE
 // ==============================
@@ -21,7 +24,7 @@ async function sendMessage(chatId, text) {
 }
 
 // ==============================
-// 📥 TELEGRAM WEBHOOK
+// 📥 WEBHOOK
 // ==============================
 app.post("/webhook", async (req, res) => {
   try {
@@ -33,7 +36,21 @@ app.post("/webhook", async (req, res) => {
 
       console.log("MESSAGE:", text);
 
-      if (text.toUpperCase().includes("PAID")) {
+      // extract code
+      const parts = text.split(" ");
+      const code = parts[1]; // contoh: ABC123
+
+      if (text.toUpperCase().includes("PAID") && code) {
+
+        // ❌ kalau dah pernah guna
+        if (usedCodes.has(code)) {
+          await sendMessage(chatId, "⚠️ Code sudah digunakan");
+          return res.sendStatus(200);
+        }
+
+        // ✅ simpan code
+        usedCodes.add(code);
+
         await sendMessage(
           chatId,
           "✅ PAYMENT BERJAYA\n🎁 Produk: https://linkanda.com"
@@ -49,25 +66,19 @@ app.post("/webhook", async (req, res) => {
 });
 
 // ==============================
-// 🌐 SET WEBHOOK AUTO
+// 🌐 SET WEBHOOK
 // ==============================
 app.get("/setwebhook", async (req, res) => {
-  try {
-    const url = `https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${WEBHOOK_URL}`;
-    await axios.get(url);
-    res.send("Webhook set!");
-  } catch (err) {
-    res.send("Error set webhook");
-  }
+  const url = `https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${WEBHOOK_URL}`;
+  await axios.get(url);
+  res.send("Webhook set!");
 });
 
 // ==============================
-// 🌐 SERVER
-// ==============================
 app.get("/", (req, res) => {
-  res.send("WEBHOOK AUTO DELIVERY 🔥");
+  res.send("AUTO DELIVERY FINAL 🔥");
 });
 
 app.listen(3000, () => {
-  console.log("SERVER RUNNING WEBHOOK MODE");
+  console.log("SERVER RUNNING");
 });
