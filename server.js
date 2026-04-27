@@ -7,13 +7,17 @@ app.use(express.json());
 // ==============================
 // 🔑 CONFIG
 // ==============================
-const BOT_TOKEN = "8533943288:AAE-9q4uhnOykClKh74m4NStD1wHBctTsj0"; // ganti token bot
-const CHECK_INTERVAL = 5000; // 5 saat
+const BOT_TOKEN = "TOKEN_KAU";
+const CHECK_INTERVAL = 5000;
 
+// simpan update terakhir
 let lastUpdateId = 0;
 
+// simpan message yang dah diproses
+let processedMessages = new Set();
+
 // ==============================
-// 📤 FUNCTION HANTAR TELEGRAM
+// 📤 SEND TELEGRAM
 // ==============================
 async function sendMessage(chatId, text) {
   try {
@@ -27,7 +31,7 @@ async function sendMessage(chatId, text) {
 }
 
 // ==============================
-// 🔍 CHECK TELEGRAM MESSAGE
+// 🔍 CHECK TELEGRAM
 // ==============================
 async function checkUpdates() {
   try {
@@ -48,12 +52,16 @@ async function checkUpdates() {
       if (update.message && update.message.text) {
         const text = update.message.text;
         const chatId = update.message.chat.id;
+        const msgId = update.message.message_id;
+
+        // ❗ skip kalau dah pernah proses
+        if (processedMessages.has(msgId)) continue;
+
+        processedMessages.add(msgId);
 
         console.log("MESSAGE MASUK:", text);
 
-        // ==============================
-        // 🔥 TRIGGER PAYMENT
-        // ==============================
+        // 🔥 TRIGGER
         if (text.toUpperCase().includes("PAID")) {
           console.log("PAYMENT DETECTED!");
 
@@ -75,12 +83,12 @@ async function checkUpdates() {
 setInterval(checkUpdates, CHECK_INTERVAL);
 
 // ==============================
-// 🌐 SERVER TEST
+// 🌐 SERVER
 // ==============================
 app.get("/", (req, res) => {
-  res.send("Telegram Auto Detect ON 🔥");
+  res.send("Auto Delivery ON 🔥");
 });
 
 app.listen(3000, () => {
-  console.log("Server running on port 3000");
+  console.log("Server running");
 });
