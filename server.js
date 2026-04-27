@@ -7,13 +7,13 @@ app.use(express.json());
 // ==============================
 // 🔑 CONFIG
 // ==============================
-const BOT_TOKEN = "8533943288:AAGE-gd4pwTeI0jdVgHzDvkC7cv0qz7V2Hs";
+const BOT_TOKEN = "8533943288:AAGE-gd4pwTeI0jdVgHzDvkC7cv0qz7V2Hs"; // WAJIB ganti
 const CHECK_INTERVAL = 5000;
 
 // simpan update terakhir
 let lastUpdateId = 0;
 
-// simpan message yang dah diproses
+// elak duplicate
 let processedMessages = new Set();
 
 // ==============================
@@ -26,7 +26,7 @@ async function sendMessage(chatId, text) {
       text: text,
     });
   } catch (err) {
-    console.log("Send error:", err.message);
+    console.log("SEND ERROR:", err.message);
   }
 }
 
@@ -40,6 +40,7 @@ async function checkUpdates() {
       {
         params: {
           offset: lastUpdateId + 1,
+          timeout: 10,
         },
       }
     );
@@ -54,16 +55,17 @@ async function checkUpdates() {
         const chatId = update.message.chat.id;
         const msgId = update.message.message_id;
 
-        // ❗ skip kalau dah pernah proses
+        // skip kalau dah pernah proses
         if (processedMessages.has(msgId)) continue;
-
         processedMessages.add(msgId);
 
-        console.log("MESSAGE MASUK:", text);
+        console.log("MESSAGE:", text);
 
-        // 🔥 TRIGGER
+        // ==============================
+        // 🔥 TRIGGER PAYMENT
+        // ==============================
         if (text.toUpperCase().includes("PAID")) {
-          console.log("PAYMENT DETECTED!");
+          console.log("PAYMENT DETECTED");
 
           await sendMessage(
             chatId,
@@ -86,9 +88,9 @@ setInterval(checkUpdates, CHECK_INTERVAL);
 // 🌐 SERVER
 // ==============================
 app.get("/", (req, res) => {
-  res.send("Auto Delivery ON 🔥");
+  res.send("AUTO DELIVERY RUNNING 🔥");
 });
 
 app.listen(3000, () => {
-  console.log("Server running");
+  console.log("SERVER ON PORT 3000");
 });
