@@ -2,107 +2,72 @@ const express = require("express");
 const axios = require("axios");
 
 const app = express();
+app.use(express.json());
 
 // ==============================
 // 🔑 CONFIG
 // ==============================
 const BOT_TOKEN = "8533943288:AAGE-gd4pwTeI0jdVgHzDvkC7cv0qz7V2Hs";
-const CHECK_INTERVAL = 5000;
-
-let lastUpdateId = 0;
-let isChecking = false;
+const WEBHOOK_URL = "https://telegram-auto-1-iaxi.onrender.com/webhook";
 
 // ==============================
 // 📤 SEND MESSAGE
 // ==============================
 async function sendMessage(chatId, text) {
-  try {
-    await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-      chat_id: chatId,
-      text: text,
-    });
-  } catch (err) {
-    console.log("SEND ERROR:", err.message);
-  }
+  await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    chat_id: chatId,
+    text: text,
+  });
 }
 
 // ==============================
-// 🔥 INIT (BUANG OLD MESSAGE)
+// 📥 TELEGRAM WEBHOOK
 // ==============================
-async function init() {
+app.post("/webhook", async (req, res) => {
   try {
-    const res = await axios.get(
-      `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates`
-    );
+    const update = req.body;
 
-    const updates = res.data.result;
+    if (update.message && update.message.text) {
+      const text = update.message.text;
+      const chatId = update.message.chat.id;
 
-    if (updates.length > 0) {
-      lastUpdateId = updates[updates.length - 1].update_id;
-    }
+      console.log("MESSAGE:", text);
 
-    console.log("INIT DONE - OLD MESSAGE CLEARED");
-  } catch (err) {
-    console.log("INIT ERROR:", err.message);
-  }
-}
-
-// ==============================
-// 🔍 CHECK UPDATE
-// ==============================
-async function checkUpdates() {
-  if (isChecking) return;
-  isChecking = true;
-
-  try {
-    const res = await axios.get(
-      `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates`,
-      {
-        params: {
-          offset: lastUpdateId + 1,
-        },
-      }
-    );
-
-    const updates = res.data.result;
-
-    for (let update of updates) {
-      lastUpdateId = update.update_id;
-
-      if (update.message && update.message.text) {
-        const text = update.message.text;
-        const chatId = update.message.chat.id;
-
-        console.log("NEW MESSAGE:", text);
-
-        if (text.toUpperCase().includes("PAID")) {
-          await sendMessage(
-            chatId,
-            "✅ PAYMENT BERJAYA\n🎁 Produk: https://linkanda.com"
-          );
-        }
+      if (text.toUpperCase().includes("PAID")) {
+        await sendMessage(
+          chatId,
+          "✅ PAYMENT BERJAYA\n🎁 Produk: https://linkanda.com"
+        );
       }
     }
+
+    res.sendStatus(200);
   } catch (err) {
     console.log("ERROR:", err.message);
+    res.sendStatus(500);
   }
-
-  isChecking = false;
-}
+});
 
 // ==============================
-// 🚀 START SYSTEM
+// 🌐 SET WEBHOOK AUTO
 // ==============================
-init();
-setInterval(checkUpdates, CHECK_INTERVAL);
+app.get("/setwebhook", async (req, res) => {
+  try {
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${WEBHOOK_URL}`;
+    await axios.get(url);
+    res.send("Webhook set!");
+  } catch (err) {
+    res.send("Error set webhook");
+  }
+});
 
 // ==============================
 // 🌐 SERVER
 // ==============================
 app.get("/", (req, res) => {
-  res.send("AUTO DELIVERY FINAL 🔥");
+  res.send("WEBHOOK AUTO DELIVERY 🔥");
 });
 
 app.listen(3000, () => {
-  console.log("SERVER RUNNING");
+  console.log("SERVER RUNNING WEBHOOK MODE");
 });
