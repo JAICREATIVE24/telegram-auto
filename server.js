@@ -4,96 +4,65 @@ const axios = require("axios");
 const app = express();
 app.use(express.json());
 
-// ================= CONFIG =================
 const BOT_TOKEN = "8533943288:AAE-9q4uhnOykClKh74m4NStD1wHBctTsj0";
 const CHAT_ID = "-1003912762823";
-const SECRET_KEY = "wswd4co3-c7q6-g3j7-x8li-818np1tksbq";
 
-// ================= TELEGRAM =================
-async function sendTelegram(message) {
-  try {
-    await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-      chat_id: CHAT_ID,
-      text: message,
-    });
-    console.log("Telegram sent");
-  } catch (err) {
-    console.log("Telegram error:", err.message);
-  }
+// 👉 TOYYIBPAY USER SECRET 
+const USER_SECRET = "wswd4co3-c7q6-g3j7-x8li-818np1tksbq";
+
+// SIMPAN BILL YANG NAK CHECK
+let billCodes = [];
+
+// HANTAR TELEGRAM
+async function sendTelegram(msg) {
+  await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    chat_id: CHAT_ID,
+    text: msg,
+  });
 }
 
-// ================= CHECK PAYMENT =================
-async function checkPayment(billCode) {
-  try {
-    const res = await axios.post(
-      "https://toyyibpay.com/index.php/api/getBillTransactions",
-      new URLSearchParams({
-        userSecretKey: SECRET_KEY,
-        billCode: billCode,
-      })
-    );
+// ADD BILL UNTUK TRACK
+app.get("/add/:billcode", (req, res) => {
+  const bill = req.params.billcode;
+  billCodes.push(bill);
+  res.send(`Tracking bill: ${bill}`);
+});
 
-    if (res.data[0] && res.data[0].billpaymentStatus === "1") {
-      return true;
-    }
-
-    return false;
-  } catch (err) {
-    console.log("ToyyibPay error:", err.message);
-    return false;
-  }
-}
-
-// ================= AUTO TRACK =================
-let bills = {};
-
-// check setiap 10 saat
+// CHECK PAYMENT LOOP
 setInterval(async () => {
-  for (let code in bills) {
-    const paid = await checkPayment(code);
+  if (billCodes.length === 0) return;
 
-    if (paid && !bills[code]) {
-      await sendTelegram(`🔥 PAYMENT BERJAYA\nBill: ${code}`);
-      bills[code] = true;
+  for (let bill of billCodes) {
+    try {
+      const res = await axios.post(
+        "https://toyyibpay.com/index.php/api/getBillTransactions",
+        new URLSearchParams({
+          userSecretKey: USER_SECRET,
+          billCode: bill,
+        })
+      );
+
+      const data = res.data;
+
+      if (data && data[0] && data[0].billpaymentStatus === "1") {
+        // SUCCESS
+
+        await sendTelegram(`✅ PAYMENT SUCCESS\nBill: ${bill}`);
+
+        // AUTO DELIVERY
+        await sendTelegram("🎁 Produk: https://linkanda.com");
+
+        // BUANG DARI LIST
+        billCodes = billCodes.filter((b) => b !== bill);
+      }
+    } catch (err) {
+      console.log("Error check:", err.message);
     }
   }
-}, 10000);
+}, 10000); // check setiap 10 saat
 
-// ================= ROUTES =================
-
-// ROOT FIX (ini penting)
 app.get("/", (req, res) => {
-  res.send("Server running...");
+  res.send("Server ON 🔥");
 });
 
-// TEST TELEGRAM
-app.get("/test", async (req, res) => {
-  await sendTelegram("🔥 TEST TELEGRAM BERJAYA");
-  res.send("Telegram OK");
-});
-
-// ADD BILL TRACKING
-app.get("/add/:billCode", (req, res) => {
-  const code = req.params.billCode;
-  bills[code] = false;
-  res.send("Tracking bill: " + code);
-});
-
-// MANUAL CHECK
-app.get("/check/:billCode", async (req, res) => {
-  const code = req.params.billCode;
-  const paid = await checkPayment(code);
-
-  if (paid) {
-    await sendTelegram(`✅ Payment berjaya untuk ${code}`);
-    return res.send("PAID");
-  }
-
-  res.send("NOT PAID");
-});
-
-// ================= START =================
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("🚀 Server running on port " + PORT);
-});
+app.listen(3000, () => console.log("Server running"));
