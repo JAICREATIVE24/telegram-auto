@@ -1,102 +1,72 @@
 const express = require("express");
+const bodyParser = require("body-parser");
 const axios = require("axios");
 
 const app = express();
-app.use(express.json());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// ===== CONFIG =====
-const BOT_TOKEN = process.env.BOT_TOKEN;
-const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
+// =========================
+// CONFIG
+// =========================
+const BOT_TOKEN = "TOKEN_TELEGRAM_KAU";
+const CHAT_ID = "CHAT_ID_KAU";
 
-// ===== FUNCTION SEND MESSAGE =====
-async function sendMessage(chatId, text) {
+// =========================
+// FUNCTION TELEGRAM
+// =========================
+async function sendTelegram(message) {
+  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+
   try {
-    await axios.post(`${TELEGRAM_API}/sendMessage`, {
-      chat_id: chatId,
-      text: text,
+    await axios.post(url, {
+      chat_id: CHAT_ID,
+      text: message,
       parse_mode: "HTML"
     });
-    console.log("✅ Hantar berjaya:", text);
+    console.log("✅ Message sent to Telegram");
   } catch (err) {
-    console.log("❌ Error:", err.response?.data || err.message);
+    console.log("❌ Telegram error:", err.response?.data || err.message);
   }
 }
 
-// ===== WEBHOOK =====
-app.post("/webhook", async (req, res) => {
+// =========================
+// TOYYIBPAY CALLBACK
+// =========================
+app.post("/callback", async (req, res) => {
   try {
-    const message = req.body.message;
-    if (!message) return res.sendStatus(200);
+    const data = req.body;
 
-    const chatId = message.chat.id;
+    console.log("📥 Callback masuk:", data);
 
-    // 🔥 FIX: case insensitive + elak undefined
-    const text = (message.text || "").toLowerCase().trim();
+    // Check payment status
+    if (data.status === "1") {
+      const customerName = data.billName || "Customer";
+      const amount = data.billAmount || "0";
 
-    console.log("📩 Message user:", text);
+      const message = `
+🔥 PAYMENT BERJAYA
 
-    // ===== COMMAND SYSTEM =====
+👤 Nama: ${customerName}
+💰 Amount: RM${amount}
 
-    // START
-    if (text === "/start") {
-      await sendMessage(chatId,
-`👋 Selamat datang ke AUTO DELIVERY SYSTEM
+✅ Produk:
+Link download: https://link-produk-kau.com
+      `;
 
-🛒 Taip command:
-BUY - untuk beli produk
-INFO - untuk info produk`
-      );
+      await sendTelegram(message);
     }
 
-    // BUY
-    else if (text === "buy") {
-      await sendMessage(chatId,
-`🔥 PRODUK PREMIUM
-
-💰 Harga: RM10
-📥 Delivery: Instant
-
-👉 Bayar sini:
-https://your-payment-link.com`
-      );
-    }
-
-    // INFO
-    else if (text === "info") {
-      await sendMessage(chatId,
-`📌 INFO PRODUK
-
-✔ Digital product
-✔ Instant delivery
-✔ Support 24 jam`
-      );
-    }
-
-    // DEFAULT
-    else {
-      await sendMessage(chatId,
-`❓ Command tak dikenali
-
-Taip:
-BUY
-INFO`
-      );
-    }
-
-    res.sendStatus(200);
-  } catch (error) {
-    console.log("❌ Webhook Error:", error.message);
-    res.sendStatus(500);
+    res.send("OK");
+  } catch (err) {
+    console.log(err);
+    res.send("ERROR");
   }
 });
 
-// ===== ROOT TEST (OPTIONAL) =====
-app.get("/", (req, res) => {
-  res.send("🚀 Telegram Auto Delivery Bot Running");
-});
-
-// ===== START SERVER =====
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("🚀 Server ON port " + PORT);
+// =========================
+// START SERVER
+// =========================
+app.listen(3000, () => {
+  console.log("🚀 Server running on port 3000");
 });
