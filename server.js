@@ -2,22 +2,19 @@ const express = require("express");
 const axios = require("axios");
 
 const app = express();
-app.use(express.json());
 
 // ==============================
 // 🔑 CONFIG
 // ==============================
-const BOT_TOKEN = "8533943288:AAGE-gd4pwTeI0jdVgHzDvkC7cv0qz7V2Hs"; // WAJIB ganti
+const BOT_TOKEN = "8533943288:AAGE-gd4pwTeI0jdVgHzDvkC7cv0qz7V2Hs";
 const CHECK_INTERVAL = 5000;
 
-// simpan update terakhir
 let lastUpdateId = 0;
-
-// elak duplicate
 let processedMessages = new Set();
+let isChecking = false; // 🔥 lock elak double loop
 
 // ==============================
-// 📤 SEND TELEGRAM
+// 📤 SEND MESSAGE
 // ==============================
 async function sendMessage(chatId, text) {
   try {
@@ -31,16 +28,18 @@ async function sendMessage(chatId, text) {
 }
 
 // ==============================
-// 🔍 CHECK TELEGRAM
+// 🔍 CHECK UPDATE
 // ==============================
 async function checkUpdates() {
+  if (isChecking) return; // 🔥 elak overlap
+  isChecking = true;
+
   try {
     const res = await axios.get(
       `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates`,
       {
         params: {
           offset: lastUpdateId + 1,
-          timeout: 10,
         },
       }
     );
@@ -55,18 +54,14 @@ async function checkUpdates() {
         const chatId = update.message.chat.id;
         const msgId = update.message.message_id;
 
-        // skip kalau dah pernah proses
+        // 🔥 skip kalau dah proses
         if (processedMessages.has(msgId)) continue;
         processedMessages.add(msgId);
 
         console.log("MESSAGE:", text);
 
-        // ==============================
-        // 🔥 TRIGGER PAYMENT
-        // ==============================
+        // 🔥 TRIGGER
         if (text.toUpperCase().includes("PAID")) {
-          console.log("PAYMENT DETECTED");
-
           await sendMessage(
             chatId,
             "✅ PAYMENT BERJAYA\n🎁 Produk: https://linkanda.com"
@@ -77,10 +72,12 @@ async function checkUpdates() {
   } catch (err) {
     console.log("ERROR:", err.message);
   }
+
+  isChecking = false;
 }
 
 // ==============================
-// 🔁 LOOP
+// 🔁 LOOP SAFE
 // ==============================
 setInterval(checkUpdates, CHECK_INTERVAL);
 
@@ -88,9 +85,9 @@ setInterval(checkUpdates, CHECK_INTERVAL);
 // 🌐 SERVER
 // ==============================
 app.get("/", (req, res) => {
-  res.send("AUTO DELIVERY RUNNING 🔥");
+  res.send("AUTO DELIVERY STABLE ✅");
 });
 
 app.listen(3000, () => {
-  console.log("SERVER ON PORT 3000");
+  console.log("SERVER RUNNING");
 });
