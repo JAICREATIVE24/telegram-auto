@@ -7,7 +7,7 @@ app.use(express.json());
 // ==============================
 // 🔑 CONFIG
 // ==============================
-const BOT_TOKEN = "TOKEN_KAU";
+const BOT_TOKEN = "8533943288:AAE-9q4uhnOykClKh74m4NStD1wHBctTsj0";
 const CHECK_INTERVAL = 5000;
 
 // simpan update terakhir
